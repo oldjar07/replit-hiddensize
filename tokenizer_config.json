@@ -1,0 +1,27 @@
+{
+  "add_prefix_space": false,
+  "additional_special_tokens": [
+    "<fim_prefix>",
+    "<fim_middle>",
+    "<fim_suffix>",
+    "<fim_eot>",
+    "<fim_pad>",
+    "[INST]",
+    "[/INST]",
+    "<extra_id_2>",
+    "<extra_id_3>",
+    "<extra_id_4>",
+    "<extra_id_5>",
+    "<extra_id_6>",
+    "<extra_id_7>",
+    "<extra_id_8>",
+    "<extra_id_9>",
+    "<extra_id_10>"
+  ],
+  "bos_token": "<|endoftext|>",
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "<|endoftext|>",
+  "model_max_length": 8192,
+  "tokenizer_class": "GPTNeoXTokenizer",
+  "unk_token": "<|endoftext|>"
+}
