@@ -1,5 +1,5 @@
 ---
-license: cc-by-sa-4.0
+license: apache-2.0
 ---
 
 # Replit Code V-1.5 3B
