@@ -1,5 +1,16 @@
 ---
 license: apache-2.0
+datasets:
+  - bigcode/the-stack-dedup
+  - togethercomputer/RedPajama-Data-1T
+tags:
+  - code
+  - Composer
+  - MosaicML
+  - llm-foundry
+  - StreamingDatasets
+language:
+  - code
 ---
 
 # Replit Code V-1.5 3B
@@ -10,13 +21,16 @@ Developed by: Replit, Inc.
 
 Replit Code v1.5 is a 3.3B parameter Causal Language Model focused on **Code Completion**.
 
-The model is trained in `bfloat16` on 1T tokens of code (~200B tokens  over 5 epochs, including linear cooldown) for 30 programming languages from a subset of permissively licensed code from Bigcode's [Stack Dedup V2 dataset](https://huggingface.co/datasets/bigcode/the-stack-dedup) and a dev-oriented samples from StackExchange. 
-The context size is 4096 tokens can be extended using techniques on its ALiBi positional embeddings. 
+The model is trained in `bfloat16` on 1T tokens of code (~200B tokens  over 5 epochs, including linear cooldown) for 30 programming languages from a subset of permissively licensed code from Bigcode's [Stack Dedup dataset](https://huggingface.co/datasets/bigcode/the-stack-dedup), a filtered natural language sample from Markdown and reStructuredText subsets from the same Stack Dedup dataset, and a dev-oriented sample from  [RedPajama's StackExchange dataset](https://github.com/togethercomputer/RedPajama-Data) sourced from the [Stack Exchange Data Dump by Stack Exchange Inc](https://archive.org/details/stackexchange).
 
-We use the GPTNeoX tokenizer with a custom trained and optimized vocabulary of 32768 tokens. This custom vocabulary led to single-digit % points on compression while maintaining or improving coverage on our training corpus.
+The 30 programming languages are: 
+```
+Java, JavaScript, C, PHP, Python, C++, C#, TypeScript, Go, CSS, HTML, Rust, Ruby, Swift, Scala, Shell, Lua, Perl, Haskell, JSX, Julia, Common Lisp, OCaml, Solidity, Scheme, R, Zig, SQL, Racket, D
+```
 
-The model has been trained on the [MosaicML](https://www.mosaicml.com/) platform on 128  H100-80GB GPUs.
+The context size of the model is 4096 tokens. We use the GPTNeoX tokenizer with a custom trained and optimized vocabulary of 32768 tokens. This custom vocabulary led to single-digit % points on compression while maintaining or improving coverage on our training corpus.
 
+The model has been trained on the [MosaicML](https://www.mosaicml.com/) platform on 128  H100-80GB GPUs using their [LLM Foundry](https://github.com/mosaicml/llm-foundry) and [Composer](https://github.com/mosaicml/composer) training library built on top of PyTorch.
 
 ## Dependancies
 You will need to install the latest versions of the following dependencies:
@@ -83,7 +97,6 @@ Experiment with different decoding methods and parameters to get the best result
 Replit intends this model be used by anyone as a foundational model for application-specific fine-tuning without strict limitations on commercial use.
 
 The model is trained specifically for code completion tasks.
-
 
 
 ## Limitations
