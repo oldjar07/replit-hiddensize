@@ -32,7 +32,7 @@ The context size of the model is 4096 tokens. We use the GPTNeoX tokenizer with 
 
 The model has been trained on the [MosaicML](https://www.mosaicml.com/) platform on 128  H100-80GB GPUs using their [LLM Foundry](https://github.com/mosaicml/llm-foundry) and [Composer](https://github.com/mosaicml/composer) training library built on top of PyTorch.
 
-## Dependancies
+## Dependencies
 You will need to install the latest versions of the following dependencies:
 ```
 einops
