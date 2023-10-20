@@ -21,7 +21,7 @@
   "bos_token": "<|endoftext|>",
   "clean_up_tokenization_spaces": false,
   "eos_token": "<|endoftext|>",
-  "model_max_length": 8192,
+  "model_max_length": 4096,
   "tokenizer_class": "GPTNeoXTokenizer",
   "unk_token": "<|endoftext|>"
 }
