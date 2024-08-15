@@ -188,15 +188,15 @@ class GroupedQueryAttention(nn.Module):
     implementation enables user to also use additive bias.
     """
 
-    def __init__(self, d_model: int, n_heads: int, kv_n_heads: int, attn_impl: str='triton', clip_qkv: Optional[float]=None, qk_ln: bool=False, softmax_scale: Optional[float]=None, attn_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None):
+    def __init__(self, hidden_size: int, n_heads: int, kv_n_heads: int, attn_impl: str='triton', clip_qkv: Optional[float]=None, qk_ln: bool=False, softmax_scale: Optional[float]=None, attn_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None):
         super().__init__()
         self.attn_impl = attn_impl
         self.clip_qkv = clip_qkv
         self.qk_ln = qk_ln
-        self.d_model = d_model
+        self.hidden_size = hidden_size
         self.n_heads = n_heads
         self.kv_n_heads = kv_n_heads
-        self.head_dim = d_model // n_heads
+        self.head_dim = hidden_size // n_heads
         if self.kv_n_heads <= 0:
             raise ValueError('kv_n_heads should be greater than zero.')
         if self.kv_n_heads > self.n_heads:
@@ -205,17 +205,17 @@ class GroupedQueryAttention(nn.Module):
             raise ValueError('Each Q head should get the same number of KV heads, so n_heads must be divisible by kv_n_heads.')
         self.softmax_scale = softmax_scale
         if self.softmax_scale is None:
-            self.softmax_scale = 1 / math.sqrt(self.d_model / self.n_heads)
+            self.softmax_scale = 1 / math.sqrt(self.hidden_size / self.n_heads)
         self.attn_dropout_p = attn_pdrop
         fc_kwargs = {}
         if fc_type != 'te':
             fc_kwargs['device'] = device
-        self.Wqkv = FC_CLASS_REGISTRY[fc_type](self.d_model, self.d_model + 2 * self.kv_n_heads * self.head_dim, **fc_kwargs)
+        self.Wqkv = FC_CLASS_REGISTRY[fc_type](self.hidden_size, self.hidden_size + 2 * self.kv_n_heads * self.head_dim, **fc_kwargs)
         fuse_splits = [i * self.head_dim for i in range(1, self.n_heads + 2 * self.kv_n_heads)]
         self.Wqkv._fused = (0, fuse_splits)
         if self.qk_ln:
             norm_class = NORM_CLASS_REGISTRY[norm_type.lower()]
-            self.q_ln = norm_class(self.d_model, device=device)
+            self.q_ln = norm_class(self.hidden_size, device=device)
             self.k_ln = norm_class(self.kv_n_heads * self.head_dim, device=device)
         if self.attn_impl == 'flash':
             self.attn_fn = flash_attn_fn
@@ -225,14 +225,14 @@ class GroupedQueryAttention(nn.Module):
             self.attn_fn = scaled_multihead_dot_product_attention
         else:
             raise ValueError(f'attn_impl={attn_impl!r} is an invalid setting.')
-        self.out_proj = FC_CLASS_REGISTRY[fc_type](self.d_model, self.d_model, **fc_kwargs)
+        self.out_proj = FC_CLASS_REGISTRY[fc_type](self.hidden_size, self.hidden_size, **fc_kwargs)
         self.out_proj._is_residual = True
 
     def forward(self, x: torch.Tensor, past_key_value: Optional[Tuple[torch.Tensor, torch.Tensor]]=None, attn_bias: Optional[torch.Tensor]=None, attention_mask: Optional[torch.Tensor]=None, is_causal: bool=True, needs_weights: bool=False) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor, torch.Tensor]]]:
         qkv = self.Wqkv(x)
         if self.clip_qkv:
             qkv = qkv.clamp(min=-self.clip_qkv, max=self.clip_qkv)
-        (query, key, value) = qkv.split([self.d_model, self.kv_n_heads * self.head_dim, self.kv_n_heads * self.head_dim], dim=2)
+        (query, key, value) = qkv.split([self.hidden_size, self.kv_n_heads * self.head_dim, self.kv_n_heads * self.head_dim], dim=2)
         key_padding_mask = attention_mask
         if self.qk_ln:
             dtype = query.dtype
@@ -248,8 +248,8 @@ class MultiheadAttention(GroupedQueryAttention):
     additive bias.
     """
 
-    def __init__(self, d_model: int, n_heads: int, attn_impl: str='triton', clip_qkv: Optional[float]=None, qk_ln: bool=False, softmax_scale: Optional[float]=None, attn_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None):
-        super().__init__(d_model=d_model, n_heads=n_heads, kv_n_heads=n_heads, attn_impl=attn_impl, clip_qkv=clip_qkv, qk_ln=qk_ln, softmax_scale=softmax_scale, attn_pdrop=attn_pdrop, norm_type=norm_type, fc_type=fc_type, device=device)
+    def __init__(self, hidden_size: int, n_heads: int, attn_impl: str='triton', clip_qkv: Optional[float]=None, qk_ln: bool=False, softmax_scale: Optional[float]=None, attn_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None):
+        super().__init__(hidden_size=hidden_size, n_heads=n_heads, kv_n_heads=n_heads, attn_impl=attn_impl, clip_qkv=clip_qkv, qk_ln=qk_ln, softmax_scale=softmax_scale, attn_pdrop=attn_pdrop, norm_type=norm_type, fc_type=fc_type, device=device)
 
 class MultiQueryAttention(GroupedQueryAttention):
     """Multi-Query self attention.
@@ -258,8 +258,8 @@ class MultiQueryAttention(GroupedQueryAttention):
     additive bias.
     """
 
-    def __init__(self, d_model: int, n_heads: int, attn_impl: str='triton', clip_qkv: Optional[float]=None, qk_ln: bool=False, softmax_scale: Optional[float]=None, attn_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None):
-        super().__init__(d_model=d_model, n_heads=n_heads, kv_n_heads=1, attn_impl=attn_impl, clip_qkv=clip_qkv, qk_ln=qk_ln, softmax_scale=softmax_scale, attn_pdrop=attn_pdrop, norm_type=norm_type, fc_type=fc_type, device=device)
+    def __init__(self, hidden_size: int, n_heads: int, attn_impl: str='triton', clip_qkv: Optional[float]=None, qk_ln: bool=False, softmax_scale: Optional[float]=None, attn_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None):
+        super().__init__(hidden_size=hidden_size, n_heads=n_heads, kv_n_heads=1, attn_impl=attn_impl, clip_qkv=clip_qkv, qk_ln=qk_ln, softmax_scale=softmax_scale, attn_pdrop=attn_pdrop, norm_type=norm_type, fc_type=fc_type, device=device)
 
 def attn_bias_shape(attn_impl: str, n_heads: int, seq_len: int, alibi: bool, prefix_lm: bool, causal: bool, use_sequence_id: bool) -> Optional[Tuple[int, int, int, int]]:
     if attn_impl == 'flash':
