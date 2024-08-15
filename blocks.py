@@ -8,7 +8,7 @@ from .norm import NORM_CLASS_REGISTRY
 
 class MPTBlock(nn.Module):
 
-    def __init__(self, d_model: int, n_heads: int, expansion_ratio: int, attn_config: Optional[Dict]=None, ffn_config: Optional[Dict]=None, resid_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None, **kwargs: Any):
+    def __init__(self, hidden_size: int, n_heads: int, expansion_ratio: int, attn_config: Optional[Dict]=None, ffn_config: Optional[Dict]=None, resid_pdrop: float=0.0, norm_type: str='low_precision_layernorm', fc_type: str='torch', device: Optional[str]=None, **kwargs: Any):
         if attn_config is None:
             attn_config = {'attn_type': 'multihead_attention', 'attn_pdrop': 0.0, 'attn_impl': 'triton', 'qk_ln': False, 'clip_qkv': None, 'softmax_scale': None, 'prefix_lm': False, 'attn_uses_sequence_id': False, 'alibi': False, 'alibi_bias_max': 8}
         if ffn_config is None:
@@ -20,12 +20,12 @@ class MPTBlock(nn.Module):
         attn_class = ATTN_CLASS_REGISTRY[attn_config['attn_type']]
         args_to_exclude_in_attn_class = {'attn_type', 'prefix_lm', 'alibi', 'attn_uses_sequence_id', 'alibi_bias_max'}
         attn_config_subset_for_attn_class = {k: v for (k, v) in attn_config.items() if k not in args_to_exclude_in_attn_class}
-        self.norm_1 = norm_class(d_model, device=device)
-        self.attn = attn_class(d_model=d_model, n_heads=n_heads, fc_type=fc_type, device=device, **attn_config_subset_for_attn_class)
+        self.norm_1 = norm_class(hidden_size, device=device)
+        self.attn = attn_class(hidden_size=hidden_size, n_heads=n_heads, fc_type=fc_type, device=device, **attn_config_subset_for_attn_class)
         self.norm_2 = None
         if not getattr(FFN_CLASS_REGISTRY[ffn_config['ffn_type']], '_has_norm', False):
-            self.norm_2 = norm_class(d_model, device=device)
-        self.ffn = build_ffn(d_model=d_model, expansion_ratio=expansion_ratio, device=device, **ffn_config)
+            self.norm_2 = norm_class(hidden_size, device=device)
+        self.ffn = build_ffn(hidden_size=hidden_size, expansion_ratio=expansion_ratio, device=device, **ffn_config)
         self.resid_attn_dropout = nn.Dropout(resid_pdrop)
         self.resid_ffn_dropout = nn.Dropout(resid_pdrop)
 

@@ -19,7 +19,7 @@
     "AutoConfig": "configuration_mpt.MPTConfig",
     "AutoModelForCausalLM": "modeling_mpt.MPTForCausalLM"
   },
-  "d_model": 3072,
+  "hidden_size": 3072,
   "emb_pdrop": 0.0,
   "embedding_fraction": 1.0,
   "expansion_ratio": 4,

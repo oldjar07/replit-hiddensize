@@ -10,14 +10,14 @@ except:
 
 class MPTMLP(nn.Module):
 
-    def __init__(self, d_model: int, expansion_ratio: int, fc_type: str='torch', device: Optional[str]=None):
+    def __init__(self, hidden_size: int, expansion_ratio: int, fc_type: str='torch', device: Optional[str]=None):
         super().__init__()
         fc_kwargs = {}
         if fc_type != 'te':
             fc_kwargs['device'] = device
-        self.up_proj = FC_CLASS_REGISTRY[fc_type](d_model, expansion_ratio * d_model, **fc_kwargs)
+        self.up_proj = FC_CLASS_REGISTRY[fc_type](hidden_size, expansion_ratio * hidden_size, **fc_kwargs)
         self.act = nn.GELU(approximate='none')
-        self.down_proj = FC_CLASS_REGISTRY[fc_type](expansion_ratio * d_model, d_model, **fc_kwargs)
+        self.down_proj = FC_CLASS_REGISTRY[fc_type](expansion_ratio * hidden_size, hidden_size, **fc_kwargs)
         self.down_proj._is_residual = True
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -27,13 +27,13 @@ if te is not None:
     te.LayerNormMLP._has_norm = True
     FFN_CLASS_REGISTRY['te_ln_mlp'] = te.LayerNormMLP
 
-def build_ffn(d_model: int, expansion_ratio: int, fc_type: str='torch', device: Optional[str]=None, **kwargs: Any) -> nn.Module:
+def build_ffn(hidden_size: int, expansion_ratio: int, fc_type: str='torch', device: Optional[str]=None, **kwargs: Any) -> nn.Module:
     ffn_type = kwargs.pop('ffn_type')
     if ffn_type == 'mptmlp':
         if len(kwargs) > 0:
             raise ValueError(f'MPTMLP got an unexpected keyword argument: {kwargs}')
-        return MPTMLP(d_model=d_model, expansion_ratio=expansion_ratio, fc_type=fc_type, device=device)
+        return MPTMLP(hidden_size=hidden_size, expansion_ratio=expansion_ratio, fc_type=fc_type, device=device)
     elif ffn_type == 'te_ln_mlp':
         assert te is not None
-        return te.LayerNormMLP(hidden_size=d_model, ffn_hidden_size=d_model * expansion_ratio, **kwargs)
+        return te.LayerNormMLP(hidden_size=hidden_size, ffn_hidden_size=hidden_size * expansion_ratio, **kwargs)
     raise ValueError(f'ffn_type={ffn_type!r} not recognized.')

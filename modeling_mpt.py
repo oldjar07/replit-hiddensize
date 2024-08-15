@@ -56,12 +56,12 @@ class MPTModel(MPTPreTrainedModel):
             raise NotImplementedError(f'Requested norm type ({config.norm_type}) is not implemented within this repo (Options: {norm_options}).')
         norm_class = NORM_CLASS_REGISTRY[config.norm_type.lower()]
         self.embedding_fraction = config.embedding_fraction
-        self.wte = SharedEmbedding(config.vocab_size, config.d_model, device=config.init_device)
+        self.wte = SharedEmbedding(config.vocab_size, config.hidden_size, device=config.init_device)
         if self.learned_pos_emb:
-            self.wpe = torch.nn.Embedding(config.max_seq_len, config.d_model, device=config.init_device)
+            self.wpe = torch.nn.Embedding(config.max_seq_len, config.hidden_size, device=config.init_device)
         self.emb_drop = nn.Dropout(config.emb_pdrop)
         self.blocks = nn.ModuleList([MPTBlock(device=config.init_device, **config.to_dict()) for _ in range(config.n_layers)])
-        self.norm_f = norm_class(config.d_model, device=config.init_device)
+        self.norm_f = norm_class(config.hidden_size, device=config.init_device)
         if config.init_device != 'meta':
             log.info(f'We recommend using config.init_device="meta" with Composer + FSDP for faster initialization.')
             self.apply(self.param_init_fn)
@@ -213,7 +213,7 @@ class MPTModel(MPTPreTrainedModel):
 
     def param_init_fn(self, module: nn.Module) -> None:
         init_fn_name = self.config.init_config['name']
-        MODEL_INIT_REGISTRY[init_fn_name](module=module, n_layers=self.config.n_layers, d_model=self.config.d_model, **self.config.init_config)
+        MODEL_INIT_REGISTRY[init_fn_name](module=module, n_layers=self.config.n_layers, hidden_size=self.config.hidden_size, **self.config.init_config)
 
     def fsdp_wrap_fn(self, module: nn.Module) -> bool:
         return isinstance(module, MPTBlock)
@@ -238,10 +238,10 @@ class MPTForCausalLM(MPTPreTrainedModel):
         if config.logit_scale is not None:
             logit_scale = config.logit_scale
             if isinstance(logit_scale, str):
-                if logit_scale == 'inv_sqrt_d_model':
-                    logit_scale = 1 / math.sqrt(config.d_model)
+                if logit_scale == 'inv_sqrt_hidden_size':
+                    logit_scale = 1 / math.sqrt(config.hidden_size)
                 else:
-                    raise ValueError(f"logit_scale={logit_scale!r} is not recognized as an option; use numeric value or 'inv_sqrt_d_model'.")
+                    raise ValueError(f"logit_scale={logit_scale!r} is not recognized as an option; use numeric value or 'inv_sqrt_hidden_size'.")
             self.logit_scale = logit_scale
 
     def get_input_embeddings(self) -> nn.Embedding:
@@ -282,7 +282,7 @@ class MPTForCausalLM(MPTPreTrainedModel):
 
     def param_init_fn(self, module: nn.Module) -> None:
         init_fn_name = self.config.init_config['name']
-        MODEL_INIT_REGISTRY[init_fn_name](module=module, n_layers=self.config.n_layers, d_model=self.config.d_model, **self.config.init_config)
+        MODEL_INIT_REGISTRY[init_fn_name](module=module, n_layers=self.config.n_layers, hidden_size=self.config.hidden_size, **self.config.init_config)
 
     def fsdp_wrap_fn(self, module: nn.Module) -> bool:
         return isinstance(module, MPTBlock)
